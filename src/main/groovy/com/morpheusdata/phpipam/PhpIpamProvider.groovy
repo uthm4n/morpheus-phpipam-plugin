@@ -221,7 +221,7 @@ class PhpIpamProvider implements IPAMProvider {
 
             SyncTask<NetworkPoolIdentityProjection,Map,NetworkPool> syncTask = new SyncTask(poolRecords, apiItems as Collection<Map>)
             syncTask.addMatchFunction { NetworkPoolIdentityProjection domainObject, Map apiItem ->
-                domainObject?.toString() == apiItem?.id?.toString()
+                domainObject.externalId == apiItem?.id?.toString()
             }.onDelete {removeItems ->
                 morpheus.network.pool.remove(poolServer.id, removeItems).blockingGet()
             }.onAdd { itemsToAdd ->
