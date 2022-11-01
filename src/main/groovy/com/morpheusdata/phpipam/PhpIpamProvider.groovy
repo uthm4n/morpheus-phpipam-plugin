@@ -605,7 +605,7 @@ class PhpIpamProvider implements IPAMProvider {
                     // create requested IP
                     // POST /addresses?subnetId=
                     HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions(ignoreSSL:poolServer.ignoreSsl, queryParams: [:])
-                    requestOptions.queryParams.subnetId = networkPool.externalId.toLong()
+                    requestOptions.queryParams.subnetId = networkPool.externalId
                     requestOptions.queryParams.hostname = hostname
                     requestOptions.queryParams.ip = networkPoolIp.ipAddress
 
@@ -623,7 +623,7 @@ class PhpIpamProvider implements IPAMProvider {
                     // POST /addresses/first_free?subnetId=
                     HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions(ignoreSSL:poolServer.ignoreSsl, queryParams: [:])
                     requestOptions.queryParams = [id: "first_free"]
-                    requestOptions.queryParams.subnetId = networkPool.externalId.toLong()
+                    requestOptions.queryParams.subnetId = networkPool.externalId
                     requestOptions.queryParams.hostname = hostname
 
 
