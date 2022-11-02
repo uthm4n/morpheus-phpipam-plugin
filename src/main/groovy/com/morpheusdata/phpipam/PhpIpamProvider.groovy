@@ -654,13 +654,13 @@ class PhpIpamProvider implements IPAMProvider {
             def tokenResults = getToken(client,poolServer)
             if(tokenResults.success) {
                 String token = tokenResults.data.token as String
-                HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions([queryParams: [id:networkPoolIp.externalId, hostname: networkPoolIp.hostname], iugnoreSSL: poolServer.ignoreSsl])
+                HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions([queryParams: [id:networkPoolIp.externalId, hostname: networkPoolIp.hostname], ignoreSSL: poolServer.ignoreSsl])
                 def results = callApi(client, poolServer.serviceUrl, 'addresses', getAppId(poolServer), token, requestOptions, 'PATCH')
                 if(results.success) {
-                    return ServiceResponse.success(poolIp)
+                    return ServiceResponse.success(networkPoolIp)
                 } else {
                     def msg = results.data?.message ?: results.msg ?: results.error ?: "Error Updating Host Record"
-                    return ServiceResponse.error(msg, null, poolIp)
+                    return ServiceResponse.error(msg, null, networkPoolIp)
                 }
             }
         } finally {
