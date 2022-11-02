@@ -272,22 +272,13 @@ class PhpIpamProvider implements IPAMProvider {
             if(existingItem) {
                 //update view ?
                 Boolean save = false
-                def hostname = update.masterItem.hostname
-                def ipType = 'assigned'
-                // if(update.masterItem.types?.contains('UNMANAGED')) {
-                // 	ipType = 'unmanaged'
-                // }
-                // if(!update.masterItem.types) {
-                // 	ipType = 'used'
-                // }
-                if(existingItem.ipType != ipType) {
-                    existingItem.ipType = ipType
+                def networkIp = "${update.masterItem.subnet}/${update.masterItem.mask}"
+                def networkView = update.masterItem.description
+                networkView = networkView?.take(255 - (networkIp.size() + 1))
+                def displayName = networkView ? (networkView + ' ' + networkIp) : networkIp
+                if(existingItem?.displayName != displayName) {
+                    existingItem.displayName = displayName
                     save = true
-                }
-                if(existingItem.hostname != hostname) {
-                    existingItem.hostname = hostname
-                    save = true
-
                 }
                 if(save) {
                     poolsToUpdate << existingItem
