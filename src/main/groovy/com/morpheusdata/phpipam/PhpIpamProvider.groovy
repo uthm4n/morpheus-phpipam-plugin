@@ -719,8 +719,8 @@ class PhpIpamProvider implements IPAMProvider {
     @Override
     List<OptionType> getIntegrationOptionTypes() {
         return [
-                new OptionType(code: 'networkPoolServer.phpipam.serviceUrl', name: 'Service URL', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUrl', fieldLabel: 'API Url', fieldContext: 'domain', helpBlock: 'gomorpheus.help.serviceUrl', displayOrder: 0),
-                new OptionType(code: 'networkPoolServer.phpipam.appId', name: 'App ID', inputType: OptionType.InputType.TEXT, fieldName: 'appId', fieldLabel: 'App ID', fieldContext: 'config', displayOrder: 1),
+                new OptionType(code: 'networkPoolServer.phpipam.serviceUrl', name: 'Service URL', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUrl', fieldLabel: 'API Url', fieldContext: 'domain', helpBlock: 'gomorpheus.help.serviceUrl', required: true, displayOrder: 0),
+                new OptionType(code: 'networkPoolServer.phpipam.appId', name: 'App ID', inputType: OptionType.InputType.TEXT, fieldName: 'appId', required: true, fieldLabel: 'App ID', fieldContext: 'config', displayOrder: 1),
                 new OptionType(code: 'networkPoolServer.phpipam.credentials', name: 'Credentials', inputType: OptionType.InputType.CREDENTIAL, fieldName: 'type', fieldLabel: 'Credentials', fieldContext: 'credential', required: true, displayOrder: 2, defaultValue: 'local',optionSource: 'credentials',config: '{"credentialTypes":["username-password"]}'),
                 new OptionType(code: 'networkPoolServer.phpipam.serviceUsername', name: 'Service Username', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUsername', fieldLabel: 'Username', fieldContext: 'domain', displayOrder: 3, localCredential: true),
                 new OptionType(code: 'networkPoolServer.phpipam.servicePassword', name: 'Service Password', inputType: OptionType.InputType.PASSWORD, fieldName: 'servicePassword', fieldLabel: 'Password', fieldContext: 'domain', displayOrder: 4, localCredential: true),
