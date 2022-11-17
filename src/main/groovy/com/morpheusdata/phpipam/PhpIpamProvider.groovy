@@ -194,7 +194,7 @@ class PhpIpamProvider implements IPAMProvider {
                 morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, '{php}IPAM api not reachable')
             }
             Date now = new Date()
-            if(loginResults.success) {
+            if(loginResults?.success) {
                 cacheNetworks(phpIpamClient,token,poolServer)
                 if(poolServer?.configMap?.inventoryExisting) {
                     cacheIpAddressRecords(phpIpamClient,token,poolServer)
