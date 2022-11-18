@@ -73,7 +73,7 @@ jar {
 				'Morpheus-Logo-Dark': 'assets/phpipam-white.svg',
 				'Morpheus-Color': '#ffffff',
 				'Morpheus-Labels': 'Plugin, Networking, Network, phpIPAM',
-				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-plugin-core',
+				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-phpipam-plugin',
 				'Morpheus-Min-Appliance-Version': "5.5.2"
 		)
 	}
