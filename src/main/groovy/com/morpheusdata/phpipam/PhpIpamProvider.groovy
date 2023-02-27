@@ -78,22 +78,32 @@ class PhpIpamProvider implements IPAMProvider {
     ServiceResponse verifyNetworkPoolServer(NetworkPoolServer poolServer, Map opts) {
         ServiceResponse<NetworkPoolServer> rtn = ServiceResponse.error()
         log.info("verifyPoolServer: ${poolServer}")
-        if (!poolServer.name) {
-            rtn.errors.name = "Name is required" // todo: i18n, or a domain level validation..
-            return rtn
+
+        rtn.errors = [:]
+        if(!poolServer.name || poolServer.name == ''){
+            rtn.errors['name'] = 'name is required'
         }
+        if(!poolServer.serviceUrl || poolServer.serviceUrl == ''){
+            rtn.errors['serviceUrl'] = 'PHP IPAM API URL is required'
+        }
+
+        if((!poolServer.serviceUsername || poolServer.serviceUsername == '') && (!poolServer.credentialData?.username || poolServer.credentialData?.username == '')){
+            rtn.errors['serviceUsername'] = 'username is required'
+        }
+        if((!poolServer.servicePassword || poolServer.servicePassword == '') && (!poolServer.credentialData?.password || poolServer.credentialData?.password == '')){
+            rtn.errors['servicePassword'] = 'password is required'
+        }
+
         if (!poolServer.configMap.appId) {
             rtn.errors.appId = "App ID is required" // todo: i18n
-            return rtn
         }
-        if (poolServer.configMap.appSecurityType == 'crypt') {
-            if (!poolServer.configMap.appKey) {
-                rtn.errors.appKey =  "App Key is required"
-                return rtn
-            }
+
+        rtn.data = poolServer
+        if(rtn.errors.size() > 0) {
+            rtn.success = false
+            return rtn //
         }
         
-        rtn.data = poolServer
         HttpApiClient phpIpamClient = new HttpApiClient()
         try {
             def apiUrl = poolServer.serviceUrl
@@ -722,8 +732,8 @@ class PhpIpamProvider implements IPAMProvider {
                 new OptionType(code: 'networkPoolServer.phpipam.serviceUrl', name: 'Service URL', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUrl', fieldLabel: 'API Url', fieldContext: 'domain', helpBlock: 'gomorpheus.help.serviceUrl', required: true, displayOrder: 0),
                 new OptionType(code: 'networkPoolServer.phpipam.appId', name: 'App ID', inputType: OptionType.InputType.TEXT, fieldName: 'appId', required: true, fieldLabel: 'App ID', fieldContext: 'config', displayOrder: 1),
                 new OptionType(code: 'networkPoolServer.phpipam.credentials', name: 'Credentials', inputType: OptionType.InputType.CREDENTIAL, fieldName: 'type', fieldLabel: 'Credentials', fieldContext: 'credential', required: true, displayOrder: 2, defaultValue: 'local',optionSource: 'credentials',config: '{"credentialTypes":["username-password"]}'),
-                new OptionType(code: 'networkPoolServer.phpipam.serviceUsername', name: 'Service Username', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUsername', fieldLabel: 'Username', fieldContext: 'domain', displayOrder: 3, localCredential: true),
-                new OptionType(code: 'networkPoolServer.phpipam.servicePassword', name: 'Service Password', inputType: OptionType.InputType.PASSWORD, fieldName: 'servicePassword', fieldLabel: 'Password', fieldContext: 'domain', displayOrder: 4, localCredential: true),
+                new OptionType(code: 'networkPoolServer.phpipam.serviceUsername', name: 'Service Username', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUsername', fieldLabel: 'Username', fieldContext: 'domain', displayOrder: 3, localCredential: true, required:true),
+                new OptionType(code: 'networkPoolServer.phpipam.servicePassword', name: 'Service Password', inputType: OptionType.InputType.PASSWORD, fieldName: 'servicePassword', fieldLabel: 'Password', fieldContext: 'domain', displayOrder: 4, localCredential: true, required:true),
                 new OptionType(code: 'networkPoolServer.phpipam.throttleRate', name: 'Throttle Rate', inputType: OptionType.InputType.NUMBER, defaultValue: 0, fieldName: 'serviceThrottleRate', fieldLabel: 'Throttle Rate', fieldContext: 'domain', displayOrder: 5),
                 new OptionType(code: 'networkPoolServer.phpipam.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 6),
                 new OptionType(code: 'networkPoolServer.phpipam.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 7),
