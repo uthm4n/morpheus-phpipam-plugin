@@ -44,6 +44,7 @@ import io.reactivex.Single
 import org.apache.commons.net.util.SubnetUtils
 import org.apache.http.entity.ContentType
 import io.reactivex.Observable
+import org.apache.commons.validator.routines.InetAddressValidator
 
 /**
  * The IPAM / DNS Provider implementation for {php}IPAM
@@ -250,23 +251,37 @@ class PhpIpamProvider implements IPAMProvider {
 
     void addMissingPools(NetworkPoolServer poolServer, Collection<Map> chunkedAddList) {
         def poolType = new NetworkPoolType(code: 'phpipam')
+        def poolTypeIpv6 = new NetworkPoolType(code: 'phpipamipv6')
         List<NetworkPool> missingPoolsList = []
         chunkedAddList?.each { Map it ->
             def networkIp = "${it.subnet}/${it.mask}"
             def networkView = it.description
             networkView = networkView?.take(255 - (networkIp.size() + 1))
             def displayName = networkView ? (networkView + ' ' + networkIp) : networkIp
-            def networkInfo = getNetworkPoolConfig(networkIp)
-
-            def addConfig = [poolServer: poolServer,account:poolServer.account, owner:poolServer.account, name:networkIp, externalId:it.id.toString(),
-                             displayName:displayName, type:poolType, poolEnabled:true, parentType:'NetworkPoolServer', parentId:poolServer.id]
-            addConfig += networkInfo.config
-            def newObj = new NetworkPool(addConfig)
-            newObj.ipRanges = []
-            networkInfo.ranges?.each { range ->
-                log.debug("range: ${range}")
-                def rangeConfig = [networkPool:newObj, startAddress:range.startAddress, endAddress:range.endAddress, addressCount:addConfig.ipCount]
-                def addRange = new NetworkPoolRange(rangeConfig)
+            def rangeConfig
+            def addRange
+            def newObj
+            def addConfig
+            if (!it.subnet.contains(':')) {
+                def networkInfo = getNetworkPoolConfig(networkIp)
+                addConfig = [poolServer: poolServer,account:poolServer.account, owner:poolServer.account, name:networkIp, externalId:it.id.toString(),
+                                displayName:displayName, type:poolType, poolEnabled:true, parentType:'NetworkPoolServer', parentId:poolServer.id]
+                addConfig += networkInfo.config
+                newObj = new NetworkPool(addConfig)
+                newObj.ipRanges = []
+                networkInfo.ranges?.each { range ->
+                    log.debug("range: ${range}")
+                    rangeConfig = [networkPool:newObj, startAddress:range.startAddress, endAddress:range.endAddress, addressCount:addConfig.ipCount]
+                    addRange = new NetworkPoolRange(rangeConfig)
+                    newObj.ipRanges.add(addRange)
+                }
+            } else {
+                addConfig = [poolServer: poolServer,account:poolServer.account, owner:poolServer.account, name:networkIp, externalId:it.id.toString(),
+                                displayName:displayName, type:poolTypeIpv6, poolEnabled:true, parentType:'NetworkPoolServer', parentId:poolServer.id]
+                newObj = new NetworkPool(addConfig)
+                newObj.ipRanges = []
+                rangeConfig = [cidrIPv6: networkIp, startIPv6Address: it.subnet, endIPv6Address: it.subnet,addressCount:1,cidr: networkIp]
+                addRange = new NetworkPoolRange(rangeConfig)
                 newObj.ipRanges.add(addRange)
             }
 
@@ -718,7 +733,8 @@ class PhpIpamProvider implements IPAMProvider {
     @Override
     Collection<NetworkPoolType> getNetworkPoolTypes() {
         return [
-                new NetworkPoolType(code:'phpipam', name:'phpIPAM', creatable:false, description:'phpIPAM', rangeSupportsCidr: false)
+                new NetworkPoolType(code:'phpipam', name:'phpIPAM', creatable:false, description:'phpIPAM', rangeSupportsCidr: false),
+                new NetworkPoolType(code:'phpipamipv6', name:'phpIPAM IPv6', creatable:false, description:'phpIPAM IPv6', rangeSupportsCidr: true, ipv6Pool:true)
         ]
     }
 
@@ -831,7 +847,6 @@ class PhpIpamProvider implements IPAMProvider {
         // this returns all of em by default
         // /api?app_id=jdtest&controller=subnets&id=all
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
-        requestOptions.queryParams = [id:"all"]
         requestOptions.ignoreSSL = true
 
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
@@ -839,7 +854,7 @@ class PhpIpamProvider implements IPAMProvider {
         if(rtn.success) {
             def networkList = results.data.data
             // exclude ipv6 for now
-            networkList = networkList?.findAll { it.subnet && it.mask && !it.subnet.contains(':') && it.subnet != '0.0.0.0' } ?: []
+            networkList = networkList?.findAll { it.subnet && it.mask && it.subnet != '0.0.0.0' } ?: []
             if (poolServer.networkFilter) {
                 // apply filter, case insensitive match of entire description
                 def poolNameFilter =  poolServer.networkFilter.tokenize(',').collect { it?.trim() }.findAll() { it }
