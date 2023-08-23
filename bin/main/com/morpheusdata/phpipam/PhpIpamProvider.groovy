@@ -394,7 +394,7 @@ class PhpIpamProvider implements IPAMProvider {
             }
         }
         if(ipsToUpdate.size() > 0) {
-            morpheus.network.pool.poolIp.save(ipsToUpdate).blockingGet()
+            morpheus.network.pool.poolIp.save(ipsToUpdate)
         }
     }
 
