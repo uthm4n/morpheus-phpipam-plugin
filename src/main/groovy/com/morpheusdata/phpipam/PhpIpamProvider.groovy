@@ -226,7 +226,7 @@ class PhpIpamProvider implements IPAMProvider {
         opts.doPaging = true
         def listResults = listNetworks(client, token, poolServer)
 
-        if(listResults.success) {
+        if(listResults.success && !listResults.error && listResults.data) {
             List apiItems = listResults.networks as List<Map>
             Observable<NetworkPoolIdentityProjection> poolRecords = morpheus.network.pool.listIdentityProjections(poolServer.id)
 
@@ -322,7 +322,7 @@ class PhpIpamProvider implements IPAMProvider {
             return morpheus.network.pool.listById(poolIdents.collect{it.id})
         }.flatMap { NetworkPool pool ->
             def listResults = listHostRecords(client,token,poolServer,pool.externalId)
-            if (listResults.success) {
+            if (listResults.success && !listResults.error && listResults.data) {
 
                 List<Map> apiItems = listResults.addresses
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
