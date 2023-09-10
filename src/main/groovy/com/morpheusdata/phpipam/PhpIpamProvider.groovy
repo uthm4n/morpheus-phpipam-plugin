@@ -225,11 +225,9 @@ class PhpIpamProvider implements IPAMProvider {
     void cacheNetworks(HttpApiClient client, String token, NetworkPoolServer poolServer, Map opts = [:]) {
         opts.doPaging = true
         def listResults = listNetworks(client, token, poolServer)
-
-        if(listResults.success && !listResults.error && listResults.data) {
+        if(listResults.success) {
             List apiItems = listResults.networks as List<Map>
             Observable<NetworkPoolIdentityProjection> poolRecords = morpheus.network.pool.listIdentityProjections(poolServer.id)
-
             SyncTask<NetworkPoolIdentityProjection,Map,NetworkPool> syncTask = new SyncTask(poolRecords, apiItems as Collection<Map>)
             syncTask.addMatchFunction { NetworkPoolIdentityProjection domainObject, Map apiItem ->
                 domainObject.externalId == apiItem?.id?.toString()
@@ -270,7 +268,6 @@ class PhpIpamProvider implements IPAMProvider {
                 newObj = new NetworkPool(addConfig)
                 newObj.ipRanges = []
                 networkInfo.ranges?.each { range ->
-                    log.debug("range: ${range}")
                     rangeConfig = [networkPool:newObj, startAddress:range.startAddress, endAddress:range.endAddress, addressCount:addConfig.ipCount]
                     addRange = new NetworkPoolRange(rangeConfig)
                     newObj.ipRanges.add(addRange)
@@ -322,8 +319,7 @@ class PhpIpamProvider implements IPAMProvider {
             return morpheus.network.pool.listById(poolIdents.collect{it.id})
         }.flatMap { NetworkPool pool ->
             def listResults = listHostRecords(client,token,poolServer,pool.externalId)
-            if (listResults.success && !listResults.error && listResults.data) {
-
+            if (listResults.success) {
                 List<Map> apiItems = listResults.addresses
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
                 SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp> syncTask = new SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp>(poolIps, apiItems)
@@ -347,12 +343,11 @@ class PhpIpamProvider implements IPAMProvider {
                     updateMatchedIps(updateItems)
                 }.observe()
             } else {
-                return Single.just(false)
+                return Observable.fromArray([])
             }
         }.doOnError{ e ->
             log.error("cacheIpRecords error: ${e}", e)
         }.subscribe()
-
     }
 
     void addMissingIps(NetworkPool pool, List addList) {
@@ -830,7 +825,8 @@ class PhpIpamProvider implements IPAMProvider {
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.queryParams = [id:subnetId, id2: 'addresses']
         requestOptions.ignoreSSL = poolServer.ignoreSsl
-        def results = callApi(client, poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
+		def appId = getAppId(poolServer)
+        def results = callApi(client, poolServer.serviceUrl, 'subnets', appId, token, requestOptions, 'GET')
         rtn.success = results.success
         if(rtn.success) {
             // if there are none, data is not returned at all, instead of an empty array
