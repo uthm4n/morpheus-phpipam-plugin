@@ -196,13 +196,13 @@ class PhpIpamProvider implements IPAMProvider {
 
                 if(!loginResults.success) {
                     //NOTE invalidLogin was only ever set to false.
-                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'error calling {php}IPAM').blockingGet()
+                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'error calling {php}IPAM').subscribe().dispose()
                 } else {
                     token = loginResults.data.token as String
-                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.syncing).blockingGet()
+                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.syncing).subscribe().dispose()
                 }
             } else {
-                morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, '{php}IPAM api not reachable')
+                morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, '{php}IPAM api not reachable').subscribe().dispose()
             }
             Date now = new Date()
             if(loginResults?.success) {
