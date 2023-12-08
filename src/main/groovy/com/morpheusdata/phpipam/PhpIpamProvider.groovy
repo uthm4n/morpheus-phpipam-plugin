@@ -322,10 +322,14 @@ class PhpIpamProvider implements IPAMProvider {
             if (listResults.success) {
                 List<Map> apiItems = listResults.addresses
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
+                /**
+                 * The match function for external id should not be used.
+                 * In phpIpam the IP address can be updated for an existing ip address record. This update will keep the external ID the same but change the record to a different IP address.
+                 * If this occurs within the PHP environment, there is a high chance the old IP will be used but with a different external ID and sync in twice into Morpheus with a duplicate IP.
+                 * Instead of explicitly managing conflicting duplicate IPs when doing add/update (see duplicate per network pool constraint on NetworkPoolIp ipAddress field), instead sync on the IP address and update the external ID accordingly if it changes.
+                 */
                 SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp> syncTask = new SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp>(poolIps, apiItems)
-                return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection ipObject, Map apiItem ->
-                    ipObject.externalId == apiItem?.id?.toString()
-                }.addMatchFunction { NetworkPoolIpIdentityProjection domainObject, Map apiItem ->
+                return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection domainObject, Map apiItem ->
                     domainObject.ipAddress == apiItem?.ip
                 }.onDelete {removeItems ->
                     morpheus.network.pool.poolIp.remove(pool.id, removeItems).blockingGet()
@@ -373,6 +377,7 @@ class PhpIpamProvider implements IPAMProvider {
             if(existingItem) {
                 def hostname = update.masterItem.hostname
                 def ipType = 'assigned'
+                def externalId = update.masterItem.id?.toString()
 
                 Boolean save = false
                 if(existingItem.ipType != ipType) {
@@ -381,6 +386,10 @@ class PhpIpamProvider implements IPAMProvider {
                 }
                 if(existingItem.hostname != hostname) {
                     existingItem.hostname = hostname
+                    save = true
+                }
+                if(existingItem.externalId != externalId) {
+                    existingItem.externalId = externalId
                     save = true
                 }
                 if(save) {
