@@ -106,7 +106,7 @@ class PhpIpamProvider implements IPAMProvider {
         }
         
         HttpApiClient phpIpamClient = new HttpApiClient()
-        def networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        def networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         phpIpamClient.networkProxy = networkProxy
         try {
             def apiUrl = poolServer.serviceUrl
@@ -181,7 +181,7 @@ class PhpIpamProvider implements IPAMProvider {
         log.debug("refreshNetworkPoolServer: {}", poolServer.dump())
         HttpApiClient phpIpamClient = new HttpApiClient()
         phpIpamClient.throttleRate = poolServer.serviceThrottleRate
-        def networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        def networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         phpIpamClient.networkProxy = networkProxy
         try {
             def apiUrl = poolServer.serviceUrl
@@ -617,7 +617,7 @@ class PhpIpamProvider implements IPAMProvider {
     @Override
     ServiceResponse createHostRecord(NetworkPoolServer poolServer, NetworkPool networkPool, NetworkPoolIp networkPoolIp, NetworkDomain domain, Boolean createARecord, Boolean createPtrRecord) {
         HttpApiClient client = new HttpApiClient();
-        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        client.networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         try {
             String hostname = networkPoolIp.hostname
             if(domain && hostname && !hostname.endsWith(domain.name))  {
@@ -684,7 +684,7 @@ class PhpIpamProvider implements IPAMProvider {
     @Override
     ServiceResponse updateHostRecord(NetworkPoolServer poolServer, NetworkPool networkPool, NetworkPoolIp networkPoolIp) {
         HttpApiClient client = new HttpApiClient();
-        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        client.networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         try {
             def tokenResults = getToken(client,poolServer)
             if(tokenResults.success) {
@@ -714,7 +714,7 @@ class PhpIpamProvider implements IPAMProvider {
     @Override
     ServiceResponse deleteHostRecord(NetworkPool networkPool, NetworkPoolIp poolIp, Boolean deleteAssociatedRecords) {
         HttpApiClient client = new HttpApiClient();
-        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        client.networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         def poolServer = morpheus.network.getPoolServerById(networkPool.poolServer.id).blockingGet()
         try {
             def tokenResults = getToken(client,poolServer)
