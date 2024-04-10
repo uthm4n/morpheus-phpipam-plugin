@@ -40,6 +40,7 @@ import com.morpheusdata.model.projection.NetworkPoolIdentityProjection
 import com.morpheusdata.model.projection.NetworkPoolIpIdentityProjection
 import com.morpheusdata.response.ServiceResponse
 import groovy.util.logging.Slf4j
+import groovy.json.JsonSlurper
 import io.reactivex.rxjava3.core.Single
 import org.apache.commons.net.util.SubnetUtils
 import org.apache.http.entity.ContentType
@@ -862,23 +863,8 @@ class PhpIpamProvider implements IPAMProvider {
         // /api?app_id=jdtest&controller=subnets&id=all
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.ignoreSSL = true
-        requestOptions.queryParams = [:]
-        if (poolServer.apiFilter) {
-            def slurper = new JsonSlurper()
-            def apiFilters = slurper.parseText(apiFilter)
-            if (apiFilters.each { it } != null) {
-                requestOptions.queryParams.filter_by = apiFilters.filter_by
-                requestOptions.queryParams.filter_match = apiFilters.filter_match
-                if(apiFilters.filter_value) {
-                    def reservedCharacters = [':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=']
-                    for (character in reservedCharacters) {
-                        if (apiFilters.filter_value.contains(character)) {
-                            apiFilters.filter_value = URLEncoder.encode(apiFilters.filter_value, "UTF-8")
-                        }
-                    }
-                    requestOptions.queryParams.filter_value = apiFilters.filter_value
-                }
-            } 
+        if (poolServer.config.apiFilter) {
+            requestOptions.queryParams = parseApiFilter(apiFilter)
         }
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
         rtn.success = results.success
@@ -1033,6 +1019,14 @@ class PhpIpamProvider implements IPAMProvider {
         return client.callJsonApi(url,null,null,null,requestOptions,method)
     }
 
+    private static String parseApiFilter(apiFilter) {
+        def apiFilters = new JsonSlurper().parseText(apiFilter)
+        if (apiFilters.each { it -> it.value != null }) {
+            apiFilters.filter_value = URLEncoder.encode(apiFilters.filter_value, "UTF-8")
+            apiFilter = apiFilters
+            return apiFilter
+        }
+    }
 
     // network filtering only supports a list of comma separated names.
     // if present, only networks with a name in the list will be synced.
