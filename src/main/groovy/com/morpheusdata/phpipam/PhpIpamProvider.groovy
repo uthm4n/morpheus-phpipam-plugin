@@ -764,7 +764,9 @@ class PhpIpamProvider implements IPAMProvider {
                 new OptionType(code: 'networkPoolServer.phpipam.throttleRate', name: 'Throttle Rate', inputType: OptionType.InputType.NUMBER, defaultValue: 0, fieldName: 'serviceThrottleRate', fieldLabel: 'Throttle Rate', fieldContext: 'domain', displayOrder: 5),
                 new OptionType(code: 'networkPoolServer.phpipam.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 6),
                 new OptionType(code: 'networkPoolServer.phpipam.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 7),
-                new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8)
+                new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8),
+                new OptionType(code: 'networkPoolServer.phpipam.apiFilter', name: 'API Filter', inputType: OptionType.InputType.TEXT, helpBlock: 'Add your filters in the JSON object provided. See the phpIPAM API documentation for usage info', defaultValue: '{"filter_by": "", "filter_value": "", "filter_match": ""}', fieldName: 'apiFilter', fieldLabel: 'API Filter', fieldContext: 'config', displayOrder: 9)
+
 
         ]
     }
@@ -860,7 +862,24 @@ class PhpIpamProvider implements IPAMProvider {
         // /api?app_id=jdtest&controller=subnets&id=all
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.ignoreSSL = true
-
+        requestOptions.queryParams = [:]
+        if (poolServer.apiFilter) {
+            def slurper = new JsonSlurper()
+            def apiFilters = slurper.parseText(apiFilter)
+            if (apiFilters.each { it } != null) {
+                requestOptions.queryParams.filter_by = apiFilters.filter_by
+                requestOptions.queryParams.filter_match = apiFilters.filter_match
+                if(apiFilters.filter_value) {
+                    def reservedCharacters = [':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=']
+                    for (character in reservedCharacters) {
+                        if (apiFilters.filter_value.contains(character)) {
+                            apiFilters.filter_value = URLEncoder.encode(apiFilters.filter_value, "UTF-8")
+                        }
+                    }
+                    requestOptions.queryParams.filter_value = apiFilters.filter_value
+                }
+            } 
+        }
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
         rtn.success = results.success
         if(rtn.success) {
