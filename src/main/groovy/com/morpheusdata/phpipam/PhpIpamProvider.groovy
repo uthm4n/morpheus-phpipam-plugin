@@ -1021,9 +1021,9 @@ class PhpIpamProvider implements IPAMProvider {
     }
 
     private static Map getApiFilter(NetworkPoolServer poolServer) {
-        def apiFilter = new JsonSlurper().parseText(poolServer?.configMap?.apiFilter)
+        String.metaClass.toMap = { new JsonSlurper().parseText(delegate) }
+        def apiFilter = poolServer?.configMap?.apiFilter.toMap()
         if (apiFilter.each { it -> it.value != null }) {
-            apiFilter.filter_value = URLEncoder.encode(apiFilter.filter_value, "UTF-8")
             return apiFilter
         }
     }
