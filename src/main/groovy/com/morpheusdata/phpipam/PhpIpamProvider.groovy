@@ -766,7 +766,7 @@ class PhpIpamProvider implements IPAMProvider {
                 new OptionType(code: 'networkPoolServer.phpipam.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 6),
                 new OptionType(code: 'networkPoolServer.phpipam.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 7),
                 new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8),
-                new OptionType(code: 'networkPoolServer.phpipam.apiFilter', name: 'API Filter', inputType: OptionType.InputType.TEXT, helpBlock: 'Add your filters into a JSON object that looks like this: {"filter_by": "", "filter_value": "", "filter_match": ""}. See the phpIPAM API documentation for usage information.', fieldName: 'apiFilter', fieldLabel: 'API Filter', fieldContext: 'config', displayOrder: 9)
+                new OptionType(code: 'networkPoolServer.phpipam.apiFilter', name: 'API Filter', inputType: OptionType.InputType.TEXT, helpBlock: 'Add your filters into a JSON object that looks like this: {"filter_by": "", "filter_value": "", "filter_match": ""}. See the phpIPAM API documentation for usage information.', fieldName: 'apiFilter', fieldLabel: 'API Filter', addTemplate: '{"filter_by": "", "filter_value": "", "filter_match": ""}', fieldContext: 'config', displayOrder: 9)
 
 
         ]
@@ -864,7 +864,7 @@ class PhpIpamProvider implements IPAMProvider {
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.ignoreSSL = true
         def apiFilter = getApiFilter(poolServer)
-        if (apiFilter != null) {
+        if (apiFilter) {
             requestOptions.queryParams = apiFilter
         }
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
@@ -1022,8 +1022,9 @@ class PhpIpamProvider implements IPAMProvider {
 
     private static Map getApiFilter(NetworkPoolServer poolServer) {
         String.metaClass.toMap = { new JsonSlurper().parseText(delegate) }
-        def apiFilter = poolServer?.configMap?.apiFilter.toMap()
-        if (apiFilter.each { it -> it.value != null }) {
+        def apiFilter = poolServer?.configMap?.apiFilter
+        if ( (apiFilter.each { it -> it.value != null }) && (apiFilter != null) ) {
+            apiFilter = apiFilter.toMap()
             return apiFilter
         }
     }
