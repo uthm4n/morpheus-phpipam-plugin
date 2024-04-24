@@ -865,7 +865,6 @@ class PhpIpamProvider implements IPAMProvider {
         requestOptions.ignoreSSL = true
         def apiFilter = getApiFilter(poolServer)
         if (apiFilter) {
- //           log.info("Filter detected. Filtering subnets by: [${apiFilter.filter_by}:${apiFilter.filter_value}] (match type: ${apiFilter.filter_match})")
             requestOptions.queryParams = apiFilter
         }
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
@@ -1024,10 +1023,9 @@ class PhpIpamProvider implements IPAMProvider {
     private static Map getApiFilter(NetworkPoolServer poolServer) {
         String.metaClass.toMap = { new JsonSlurper().parseText(delegate) }
         def apiFilter = poolServer?.configMap?.apiFilter
-        if (!apiFilter || apiFilter == "null") {
-            return [:]
-        } else if (apiFilter instanceof Map && apiFilter?.values?.findAll { it }.size() > 0) {
-            return apiFilter.toMap()
+        if ( (apiFilter.each { it -> it.value != null }) && (apiFilter != null) ) {
+            apiFilter = apiFilter.toMap()
+            return apiFilter
         }
     }
 
