@@ -757,7 +757,8 @@ class PhpIpamProvider implements IPAMProvider {
                 new OptionType(code: 'networkPoolServer.phpipam.throttleRate', name: 'Throttle Rate', inputType: OptionType.InputType.NUMBER, defaultValue: 0, fieldName: 'serviceThrottleRate', fieldLabel: 'Throttle Rate', fieldContext: 'domain', displayOrder: 5),
                 new OptionType(code: 'networkPoolServer.phpipam.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 6),
                 new OptionType(code: 'networkPoolServer.phpipam.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 7),
-                new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8)
+                new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8),
+                new OptionType(code: 'networkPoolServer.phpipam.apiFilter', name: 'API Filter', inputType: OptionType.InputType.TEXT, helpBlock: 'Add your filters into a JSON object that looks like this: {"filter_by": "id", "filter_value": "([0-2])", "filter_match": "regex"}. See the phpIPAM API documentation for usage information.', fieldName: 'apiFilter', fieldLabel: 'API Filter', fieldContext: 'config', displayOrder: 9)
 
         ]
     }
@@ -853,6 +854,12 @@ class PhpIpamProvider implements IPAMProvider {
         // /api?app_id=jdtest&controller=subnets&id=all
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.ignoreSSL = true
+
+        // optional filtering on the api call instead of returning all by default 
+        def apiFilter = getApiFilter(poolServer)
+        if (apiFilter) {
+            requestOptions.queryParams = apiFilter
+        }
 
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
         rtn.success = results.success
@@ -1007,6 +1014,14 @@ class PhpIpamProvider implements IPAMProvider {
         return client.callJsonApi(url,null,null,null,requestOptions,method)
     }
 
+    private static Map getApiFilter(NetworkPoolServer poolServer) {
+        String.metaClass.toMap = { new JsonSlurper().parseText(delegate) }
+        def apiFilter = poolServer?.configMap?.apiFilter
+        if ( (apiFilter.each { it -> it.value != null }) && (apiFilter != null) ) {
+            apiFilter = apiFilter.toMap()
+            return apiFilter
+        }
+    }
 
     // network filtering only supports a list of comma separated names.
     // if present, only networks with a name in the list will be synced.
