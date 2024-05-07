@@ -768,7 +768,6 @@ class PhpIpamProvider implements IPAMProvider {
                 new OptionType(code: 'networkPoolServer.phpipam.networkFilter', name: 'Network Filter', inputType: OptionType.InputType.TEXT, fieldName: 'networkFilter', fieldLabel: 'Network Filter', fieldContext: 'domain', displayOrder: 8),
                 new OptionType(code: 'networkPoolServer.phpipam.apiFilter', name: 'API Filter', inputType: OptionType.InputType.TEXT, helpBlock: 'Add your filters into a JSON object that looks like this: {"filter_by": "", "filter_value": "", "filter_match": ""}. See the phpIPAM API documentation for usage information.', fieldName: 'apiFilter', fieldLabel: 'API Filter', addTemplate: '{"filter_by": "", "filter_value": "", "filter_match": ""}', fieldContext: 'config', displayOrder: 9)
 
-
         ]
     }
 
@@ -863,9 +862,16 @@ class PhpIpamProvider implements IPAMProvider {
         // /api?app_id=jdtest&controller=subnets&id=all
         HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
         requestOptions.ignoreSSL = true
-        def apiFilter = getApiFilter(poolServer)
-        if (apiFilter) {
-            requestOptions.queryParams = apiFilter
+        
+	def apiFilter = getApiFilter(poolServer)
+        def apiFilterResults = testApiFilter(client, apiFilter, poolServer)
+        if (apiFilterResults.success) {
+            if (apiFilterResults.debug.filter_results.total >= 1) {
+                requestOptions.queryParams = apiFilter
+            } else {
+                requestOptions.queryParams = [:]
+                log.debug("ignoring api filter. applied filter returns no results: ${apiFilterResults.debug}")
+            }
         }
         def results = callApi(client,poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
         rtn.success = results.success
@@ -1021,11 +1027,66 @@ class PhpIpamProvider implements IPAMProvider {
     }
 
     private static Map getApiFilter(NetworkPoolServer poolServer) {
-        String.metaClass.toMap = { new JsonSlurper().parseText(delegate) }
         def apiFilter = poolServer?.configMap?.apiFilter
-        if ( (apiFilter.each { it -> it.value != null }) && (apiFilter != null) ) {
-            apiFilter = apiFilter.toMap()
-            return apiFilter
+        try {
+            MorpheusUtils.getJson(apiFilter)
+        } catch (Exception e) {
+            println "Error converting api filter JSON to Map: ${e}"
+        }
+    }
+
+    private Map testApiFilter(HttpApiClient client, String token, NetworkPoolServer poolServer) {
+        HttpApiClient.RequestOptions requestOptions = new HttpApiClient.RequestOptions()
+        requestOptions.queryParams = [:]
+        if (isValid apiFilter) {
+            requestOptions.queryParams = getApiFilter(poolServer)
+        } else {
+            log.debug("api filter is invalid: ")
+        }
+
+        def rtn = [success:false, response_code:"", msg:"", debug:[filter:apiFilter, filter_results:[:]]]
+        def filterResults = callApi(client, poolServer.serviceUrl, 'subnets', getAppId(poolServer), token, requestOptions, 'GET')
+        try {
+            rtn.success = filterResults.success
+            rtn.response_code = filterResults.data.code
+            rtn.msg = filterResults.data.message ?: filterResults.msg
+            rtn.debug.filter = apiFilter
+            rtn.debug.filter_results.total = filterResults.data.data.size()
+            rtn.debug.filter_results.subnets = [id: filterResults.data.data[0].'id']
+        } catch(Exception e) {
+            println "Something failed: ${e}"
+        } finally {
+            client.shutdownClient()
+        }
+        return rtn
+    }
+
+    private static Boolean isValid(apiFilter) {
+        def matchType = ['regex', 'full', 'partial']
+
+        def apiFilterSchema = [filter_by: String, filter_value: String, filter_match: String]
+        def schemaTest = "FAILED"
+        if (apiFilter) {
+            apiFilter.each { k, v ->
+                apiFilterSchema.containsKey(k)
+                v.class === apiFilterSchema.values().class
+            }
+            schemaTest = "PASSED"
+        }
+
+        def filter = apiFilter.it.collect { key ->
+            switch (key) {
+                case "filter_by":
+                    assert apiFilter.containsKey('filter_by')
+                    assert apiFilter['filter_by'] == String
+                    break
+                case "filter_value":
+                    assert apiFilter['filter_value'] == String
+                    break
+                case "filter_match":
+                    assert apiFilter['filter_match'] in { it.matchType }
+                    break
+            }
         }
     }
 
